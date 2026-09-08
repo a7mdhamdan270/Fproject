@@ -1,0 +1,43 @@
+name: Security Scanning
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  security-scan:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: TruffleHog - Scan for secrets
+        run: |
+          sudo docker run --rm \
+            -v "${{ github.workspace }}:/repo" \
+            trufflesecurity/trufflehog:latest \
+            git file:///repo --only-verified
+
+      - name: Bandit - Python SAST
+        run: |
+          sudo docker run --rm \
+            -v "${{ github.workspace }}/webapp:/app" \
+            python:3.12-slim \
+            bash -c "pip install bandit -q && bandit -r /app -f txt || true"
+
+      - name: Hadolint - Dockerfile linting
+        run: |
+          sudo docker run --rm \
+            -v "${{ github.workspace }}/webapp/dockerfile:/Dockerfile" \
+            hadolint/hadolint:latest \
+            hadolint /Dockerfile || true
+
+      - name: Trivy - Container image scan
+        run: |
+          sudo docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            aquasec/trivy:latest \
+            image --severity HIGH,CRITICAL webapp:latest || true
