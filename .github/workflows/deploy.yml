@@ -7,6 +7,8 @@ on:
 jobs:
   build-and-deploy:
     runs-on: self-hosted
+    env:
+      VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -16,18 +18,7 @@ jobs:
           cd ${{ github.workspace }}/webapp
           sudo docker build -t webapp:latest .
 
-      - name: Get secrets from Vault
-        env:
-          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
-        run: |
-          sudo docker exec \
-            -e VAULT_ADDR='http://127.0.0.1:8200' \
-            -e VAULT_TOKEN="${VAULT_TOKEN}" \
-            vault-skills vault kv get -format=json secret/webapp \
-            | jq -r '.data.data | to_entries[] | .key + "=" + (.value|tostring)' \
-            > ${{ github.workspace }}/.env
-
       - name: Deploy with Docker Compose
         run: |
           cd ${{ github.workspace }}
-          sudo docker compose up -d --build
+          sudo -E docker compose up -d --build
