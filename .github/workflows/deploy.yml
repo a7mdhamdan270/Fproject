@@ -16,7 +16,17 @@ jobs:
           cd ${{ github.workspace }}/webapp
           sudo docker build -t webapp:latest .
 
+      - name: Get secrets from Vault and create .env
+        run: |
+          sudo docker exec \
+            -e VAULT_ADDR='http://127.0.0.1:8200' \
+            -e VAULT_TOKEN='${{ secrets.VAULT_TOKEN }}' \
+            vault-skills vault kv get -format=json secret/webapp \
+            | jq -r '.data.data | to_entries[] | .key + "=" + (.value|tostring)' \
+            > ${{ github.workspace }}/.env
+          echo "VAULT_TOKEN=${{ secrets.VAULT_TOKEN }}" >> ${{ github.workspace }}/.env
+
       - name: Deploy with Docker Compose
         run: |
           cd ${{ github.workspace }}
-          sudo VAULT_TOKEN="${{ secrets.VAULT_TOKEN }}" docker compose up -d --build
+          sudo docker compose up -d --build
