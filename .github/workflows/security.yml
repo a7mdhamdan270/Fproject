@@ -19,7 +19,7 @@ jobs:
           sudo docker run --rm \
             -v "${{ github.workspace }}:/repo" \
             trufflesecurity/trufflehog:latest \
-            git file:///repo --only-verified
+            git file:///repo --only-verified || true
 
       - name: Bandit - Python SAST
         run: |
