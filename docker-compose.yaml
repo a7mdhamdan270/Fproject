@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: skills-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d course_recommendation_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  secrets-init:
+    image: hashicorp/vault:1.17
+    container_name: secrets-init
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./vault/vault.sh:/vault.sh:ro
+      - ./:/Fproject
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        apk add --no-cache bash jq
+        bash /vault.sh
+    restart: "no"
+
+  web:
+    build:
+      context: ./webapp
+      dockerfile: dockerfile
+    container_name: skills-app
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      secrets-init:
+        condition: service_completed_successfully
+
+volumes:
+  postgres_data:
