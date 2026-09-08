@@ -1,15 +1,15 @@
 #!/bin/bash
 
 VAULT_ADDR="${VAULT_ADDR:-http://host.docker.internal:8200}"
-VAULT_TOKEN='${VAULT_TOKEN}'
-SECRET_PATH='secret/data/webapp'
+VAULT_TOKEN="${VAULT_TOKEN}"
+SECRET_PATH='secret/webapp'
 ENV_FILE='/Fproject/.env'
 
 export VAULT_ADDR
 export VAULT_TOKEN
 
 echo "Retrieving secrets from Vault..."
-SECRETS=$(docker exec -e VAULT_ADDR="$VAULT_ADDR" -e VAULT_TOKEN="$VAULT_TOKEN" vault-skills vault kv get -format=json secret/webapp 2>/dev/null)
+SECRETS=$(vault kv get -format=json $SECRET_PATH 2>/dev/null)
 
 if [ -z "$SECRETS" ]; then
   echo "Failed to retrieve secrets from Vault."
@@ -21,8 +21,6 @@ echo "$SECRETS" | jq -r '.data.data | to_entries[] | .key + "=" + (.value|tostri
 
 if [ $? -eq 0 ]; then
   echo "Successfully created $ENV_FILE!"
-  echo "Running Docker containers..."
-  docker compose up -d
 else
   echo "Failed to process secrets with jq."
   exit 1
