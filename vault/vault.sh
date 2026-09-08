@@ -1,6 +1,6 @@
 #!/bin/bash
 
-VAULT_ADDR='http://127.0.0.1:8200'
+VAULT_ADDR="${VAULT_ADDR:-http://host.docker.internal:8200}"
 VAULT_TOKEN='${VAULT_TOKEN}'
 SECRET_PATH='secret/data/webapp'
 ENV_FILE='/Fproject/.env'
